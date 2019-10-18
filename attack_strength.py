@@ -1,0 +1,115 @@
+saliency + madry
+top 900
+0.8731435643564357 0.557240099009901
+kendall_g 0.48566055923720997
+spearman_g 0.625617529568372
+intersection_g 0.5775907590759075
+kendall_ig 0.6403011469201358
+spearman_ig 0.7634414440619995
+intersection_ig 0.6462871287128713
+
+
+saliency + madry
+top 2000
+0.8732 0.5434
+kendall_g 0.4651045818783771
+spearman_g 0.599991855771682
+intersection_g 0.5683173588924388
+kendall_ig 0.6283028372193017
+spearman_ig 0.7517652284358638
+intersection_ig 0.6396430000000001
+
+saliency+madry
+no topk
+0.8732 0.5371
+kendall_g 0.46400678006544477
+spearman_g 0.5981474655959667
+intersection_g 0.5659105431309905
+kendall_ig 0.6265081336517325
+spearman_ig 0.7498328068717911
+intersection_ig 0.6400459999999999
+
+
+saliency
+0.8706808943089431 0.739329268292683
+kendall_g 0.5101236320352477
+spearman_g 0.6522009694143068
+intersection_g 0.5991734417344173
+kendall_ig 0.6843379516945837
+spearman_ig 0.8089424037066538
+intersection_ig 0.6837601626016261
+
+madry
+
+0.8704912935323383 0.5068407960199005
+kendall_g 0.47778155988857873
+spearman_g 0.6166205134495496
+intersection_g 0.5753897180762853
+kendall_ig 0.6139469058450235
+spearman_ig 0.7374727448540852
+intersection_ig 0.6234032960199005
+
+
+
+conv model: saliency 
+top 1500 (conv aux also softplus)
+
+0.9223 0.8475
+kendall_g 0.5136062331552685
+spearman_g 0.6622123608790126
+intersection_g 0.5704046858359958
+kendall_ig 0.7777883931502881
+spearman_ig 0.8834616651068178
+intersection_ig 0.755624
+
+
+conv model: saliency 
+top 1500 (conv aux relu)
+
+0.9223 0.8564
+kendall_g 0.5222675177447557
+spearman_g 0.6744412008584757
+intersection_g 0.5796272630457934
+kendall_ig 0.7804057798405534
+spearman_ig 0.8867743487329895
+intersection_ig 0.75814
+
+
+
+conv model: saliency 
+top 1500 (conv aux also softplus)
+attack using only backbone model and not conv
+
+0.9223 0.5487
+kendall_g 0.4295300351451508
+spearman_g 0.5726361239313881
+intersection_g 0.49150159744408944
+kendall_ig 0.64843014610259
+spearman_ig 0.758183596841322
+intersection_ig 0.638607
+
+
+conv model with sal fgsm attack train: saliency
+top 1500 
+attack using only backbone model and not conv
+
+0.873 0.6768
+kendall_g 0.584388977793283
+spearman_g 0.7316135172242734
+intersection_g 0.6592651757188498
+kendall_ig 0.7357360514567671
+spearman_ig 0.8616733922236431
+intersection_ig 0.715974
+
+
+conv model with sal fgsm attack train: saliency
+top 1500 (conv softplus)
+attack using backbone+ conv
+
+0.873 0.8578
+kendall_g 0.6622925069648558
+spearman_g 0.8080210256527998
+intersection_g 0.7200532481363152
+kendall_ig 0.8057249938279232
+spearman_ig 0.9165808349790834
+intersection_ig 0.770595
