@@ -4,7 +4,7 @@ Charting the Right Manifold: Manifold Mixup for Few-shot Learning
 
 A few-shot classification algorithm: [Charting the Right Manifold: Manifold Mixup for Few-shot Learning](https://arxiv.org/pdf/1907.12087.pdf)
 
-Our code is built upon the code base of [A Closer Look at Few-shot Classification](https://openreview.net/pdf?id=HkxLXnAcFQ)
+Our code is built upon the code base of [A Closer Look at Few-shot Classification](https://openreview.net/pdf?id=HkxLXnAcFQ) and [Manifold Mixup: Better Representations by Interpolating Hidden States](http://proceedings.mlr.press/v97/verma19a.html)
 
 Running the code
 ------------
@@ -83,3 +83,4 @@ References
 
 [Meta Learning with Differentiable Convex Optimization](https://arxiv.org/pdf/1904.03758.pdf)
 
+[Manifold Mixup: Better Representations by Interpolating Hidden States](http://proceedings.mlr.press/v97/verma19a.html)
