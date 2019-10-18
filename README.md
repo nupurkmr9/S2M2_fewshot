@@ -2,7 +2,7 @@ S2M2
 Charting the Right Manifold: Manifold Mixup for Few-shot Learning
 =======
 
-A few-shot classification algorithm.
+A few-shot classification algorithm: [Charting the Right Manifold: Manifold Mixup for Few-shot Learning](https://arxiv.org/pdf/1907.12087.pdf)
 
 Our code is built upon the code base of [A Closer Look at Few-shot Classification](https://openreview.net/pdf?id=HkxLXnAcFQ)
 
@@ -24,6 +24,10 @@ CIFAR-FS
 miniImagenet
 * Change directory to filelists/miniImagenet/
 * run 'source ./download_miniImagenet.sh' 
+
+
+**Training**
+	
 
 **Fetching WideResNet_28_10 model checkpoints for evaluation**
 

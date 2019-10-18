@@ -366,7 +366,7 @@ if __name__ == '__main__':
     elif params.method == 'S2M2_R':
         model = wrn_mixup_model.wrn28_10(200)
     elif params.method == 'rotation':
-        model = model_dict[params.model]()
+        model = BaselineTrain( model_dict[params.model], params.num_classes, loss_type = 'dist')
  
             
     model = torch.nn.DataParallel(model, [0,1,2,3,4,5,6,7])   

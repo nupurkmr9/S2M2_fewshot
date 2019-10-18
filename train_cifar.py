@@ -26,22 +26,193 @@ import wrn_mixup_model
 from io_utils import model_dict, parse_args, get_resume_file ,get_assigned_file
 
 
-parser.add_argument('--decay', default=1e-4, type=float, help='weight decay')
 
 
-use_cuda = torch.cuda.is_available()
+def train_manifold_mixup(base_loader, base_loader_test, model, start_epoch, stop_epoch, params):
+
+    def mixup_criterion(criterion, pred, y_a, y_b, lam):
+        return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters())
+    print("stop_epoch"  , start_epoch, stop_epoch)
+
+    for epoch in range(start_epoch, stop_epoch):
+        print('\nEpoch: %d' % epoch)
+
+        model.train()
+        train_loss = 0
+        reg_loss = 0
+        correct = 0
+        correct1 = 0.0
+        total = 0
+
+        for batch_idx, (input_var, target_var) in enumerate(trainloader):
+            input_var, target_var = input_var.cuda(), target_var.cuda()
+            input_var, target_var = Variable(input_var), Variable(target_var)
+            lam = np.random.beta(args.alpha, args.alpha)
+            _ , outputs , target_a , target_b  = model(input_var, target_var, mixup_hidden= True, mixup_alpha = args.alpha , lam = lam)
+            loss = mixup_criterion(criterion, outputs, target_a, target_b, lam)
+            train_loss += loss.data.item()
+            _, predicted = torch.max(outputs.data, 1)
+            total += target_var.size(0)
+            correct += (lam * predicted.eq(target_a.data).cpu().sum().float()
+                        + (1 - lam) * predicted.eq(target_b.data).cpu().sum().float())
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            if batch_idx%50 ==0 :
+                print('{0}/{1}'.format(batch_idx,len(trainloader)), 'Loss: %.3f | Acc: %.3f%%  | Orig Acc:  %.3f%% '
+                             % (train_loss/(batch_idx+1),100.*correct/total , 100.*correct/total))
+        
+
+        if not os.path.isdir(params.checkpoint_dir):
+            os.makedirs(params.checkpoint_dir)
+
+        if (epoch % params.save_freq==0) or (epoch==stop_epoch-1):
+            outfile = os.path.join(params.checkpoint_dir, '{:d}.tar'.format(epoch))
+            torch.save({'epoch':epoch, 'state':model.state_dict() }, outfile)
+         
+
+        model.eval()
+        test_loss = 0
+        correct = 0
+        total = 0
+        for batch_idx, (inputs, targets) in enumerate(base_loader_test):
+            inputs, targets = inputs.cuda(), targets.cuda()
+            inputs, targets = Variable(inputs, volatile=True), Variable(targets)
+            f , outputs = model.forward(inputs)
+            loss = criterion(outputs, targets)
+            test_loss += loss.data.item()
+            _, predicted = torch.max(outputs.data, 1)
+            total += targets.size(0)
+            correct += predicted.eq(targets.data).cpu().sum()
+
+        print('Loss: %.3f | Acc: %.3f%%'
+                         % (test_loss/(batch_idx+1), 100.*correct/total ))
+
+
+        
+    return model 
+
+
+
+
+def train_rotation(base_loader, base_loader_test, model, optimization, start_epoch, stop_epoch, params , tmp):
+    rotate_classifier = nn.Sequential( nn.Linear(640,4)) 
+    rotate_classifier.cuda()
+    
+    if 'rotate' in tmp:
+        print("loading rotate model")
+        rotate_classifier.load_state_dict(tmp['rotate'])
+        
+    optimizer = torch.optim.Adam([
+                {'params': model.parameters()},
+                {'params': rotate_classifier.parameters()}
+            ])
+    
+    lossfn = nn.CrossEntropyLoss()
+    max_acc = 0 
+
+    print("stop_epoch" , start_epoch, stop_epoch )
+
+    for epoch in range(start_epoch,stop_epoch):
+        rotate_classifier.train()
+        model.train()
+
+        avg_loss=0
+        avg_rloss=0
+        
+        for i, (x,y) in enumerate(base_loader):
+            bs = x.size(0)
+            x_ = []
+            y_ = []
+            a_ = []
+            for j in range(bs):
+                x90 = x[j].transpose(2,1).flip(1)
+                x180 = x90.transpose(2,1).flip(1)
+                x270 =  x180.transpose(2,1).flip(1)
+                x_ += [x[j], x90, x180, x270]
+                y_ += [y[j] for _ in range(4)]
+                a_ += [torch.tensor(0),torch.tensor(1),torch.tensor(2),torch.tensor(3)]
+
+            x_ = Variable(torch.stack(x_,0)).cuda()
+            y_ = Variable(torch.stack(y_,0)).cuda()
+            a_ = Variable(torch.stack(a_,0)).cuda()
+            f,scores = model.forward(x_)
+            rotate_scores =  rotate_classifier(f)
+
+            optimizer.zero_grad()
+            rloss = lossfn(rotate_scores,a_)
+            closs = lossfn(scores, y_)
+            loss = 0.5*closs + 0.5*rloss
+            loss.backward()
+            optimizer.step()
+
+            avg_loss = avg_loss+closs.data.item()
+            avg_rloss = avg_rloss+rloss.data.item()
+            
+
+            if i % 50 ==0:
+                print('Epoch {:d} | Batch {:d}/{:d} | Loss {:f} | Rotate Loss {:f}'.format(epoch, i, len(base_loader), avg_loss/float(i+1),avg_rloss/float(i+1)  ))
+            
+            
+        if not os.path.isdir(params.checkpoint_dir):
+            os.makedirs(params.checkpoint_dir)
+
+        if (epoch % params.save_freq==0) or (epoch==stop_epoch-1):
+            outfile = os.path.join(params.checkpoint_dir, '{:d}.tar'.format(epoch))
+            torch.save({'epoch':epoch, 'state':model.state_dict() , 'rotate': rotate_classifier.state_dict()}, outfile)
+         
+
+                
+        model.eval()
+        rotate_classifier.eval()
+        correct = rcorrect = total = 0
+        for i,(x,y) in enumerate(base_loader_test):
+            if i<2:
+                bs = x.size(0)
+                x_ = []
+                y_ = []
+                a_ = []
+                for j in range(bs):
+                    x90 = x[j].transpose(2,1).flip(1)
+                    x180 = x90.transpose(2,1).flip(1)
+                    x270 =  x180.transpose(2,1).flip(1)
+                    x_ += [x[j], x90, x180, x270]
+                    y_ += [y[j] for _ in range(4)]
+                    a_ += [torch.tensor(0),torch.tensor(1),torch.tensor(2),torch.tensor(3)]
+
+                x_ = Variable(torch.stack(x_,0)).cuda()
+                y_ = Variable(torch.stack(y_,0)).cuda()
+                a_ = Variable(torch.stack(a_,0)).cuda()
+                f,scores = model(x_)
+                rotate_scores =  rotate_classifier(f)
+                p1 = torch.argmax(scores,1)
+                correct += (p1==y_).sum().item()
+                total += p1.size(0)
+                p2 = torch.argmax(rotate_scores,1)
+                rcorrect += (p2==a_).sum().item()
+
+        print("Epoch {0} : Accuracy {1}, Rotate Accuracy {2}".format(epoch,(float(correct)*100)/total,(float(rcorrect)*100)/total))
+        
+
+    return model
 
 
 if __name__ == '__main__':
     params = parse_args('save_features')
     
-    image_size = 80
+    image_size = 32
 
 
     split = params.split
     base_file = configs.data_dir[params.dataset] + 'base.json'
     checkpoint_dir = '%s/checkpoints/%s/%s_%s' %(configs.save_dir, params.dataset, params.model, params.method)
-    
+    start_epoch = params.start_epoch
+    stop_epoch = params.stop_epoch
 
     if params.save_iter != -1:
         modelfile   = get_assigned_file(checkpoint_dir,params.save_iter)
@@ -56,240 +227,45 @@ if __name__ == '__main__':
 
 
     if params.method == 'manifold_mixup':
-        model = wrn_mixup_model.wrn28_10(200)
+        model = wrn_mixup_model.wrn28_10(64)
     elif params.method == 'S2M2_R':
-        model = wrn_mixup_model.wrn28_10(200)
-    else:
-        model = model_dict[params.model]()
-
+        model = wrn_mixup_model.wrn28_10(64)
+    elif params.method == 'rotation':
+        model = BaselineTrain( model_dict[params.model], 64, loss_type = 'dist')
  
             
-if use_cuda:
-    model = torch.nn.DataParallel(model, [0,1,2,3,4,5,6,7])   
     
-    if params.method =='S2M2_R'
+    if params.method =='S2M2_R' 
         resume_rotate_file_dir = checkpoint_dir.replace("S2M2_R","rotation")
-        resume_file = get_resume_file( resume_rotate_file_dir )
-        
+        resume_file = get_resume_file( resume_rotate_file_dir )        
         print("resume_file" , resume_file)
         tmp = torch.load(resume_file)
         start_epoch = tmp['epoch']+1
         print("restored epoch is" , tmp['epoch'])
         state = tmp['state']
         state_keys = list(state.keys())
+
         for i, key in enumerate(state_keys):
-            if 'linear' in key:
-                state.pop[key]
             if "feature." in key:
                 newkey = key.replace("feature.","")  # an architecture model has attribute 'feature', load architecture feature to backbone by casting name from 'feature.trunk.xx' to 'trunk.xx'  
                 state[newkey] = state.pop(key)
             else:
+                state[key.replace("classifier.","linear.")] =  state[key]
                 state.pop(key)
+
         
-        model_dict_load = model.state_dict()
-        model_dict_load.update(state)
-        model.load_state_dict(model_dict_load)
-        
-        
-    
-    model.cuda()
-    cudnn.benchmark = True
+        model.load_state_dict(state)        
+        model = torch.nn.DataParallel(model, [0,1,2])  
+        model.cuda()
+        model = train_manifold_mixup(base_loader, val_loader, model, start_epoch, start_epoch+stop_epoch, params)
 
 
-criterion = nn.CrossEntropyLoss()
+    elif params.method =='rotation':
+        model = train_rotation(base_loader, val_loader, model, start_epoch, stop_epoch, params,tmp):
 
-bce_loss = nn.BCELoss().cuda()
-
-softmax = nn.Softmax(dim=1).cuda()
-
-
-# optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov = True, weight_decay=args.decay)
-
-# def lr_lambda(step):
-#     if step in range(0,200):
-#         return 1.0
-#     elif step in range(200,300):
-#         return 0.1
-#     elif step >=300:
-#         return 0.1
-#     else:
-#         return 1
-    
-# scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+    elif params.method == 'manifold_mixup':
+        model = train_manifold_mixup(base_loader, val_loader, model, start_epoch, stop_epoch, params):
 
 
-# optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov = True, weight_decay=args.decay)
 
-# def lr_lambda(step):
-#     if step in range(0,60):
-#         return 1.0
-#     elif step in range(60,120):
-#         return 0.1
-#     elif step in range(120,180):
-#         return 0.1
-#     elif step >=180:
-#         return 1.0
-#     else:
-#         return 1
-    
-    
-# scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-
-
-optimizer = optim.Adam(model.parameters(), lr=args.lr)
-
-def lr_lambda(step):
-    if step in range(0,300):
-        return 1.0
-    else:
-        return 1
-    
-    
-scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-
-
-def mixup_data(x, y, alpha=1.0, use_cuda=True):
-    '''Returns mixed inputs, pairs of targets, and lambda'''
-    if alpha > 0:
-        lam = np.random.beta(alpha, alpha)
-    else:
-        lam = 1
-
-    batch_size = x.size()[0]
-    if use_cuda:
-        index = torch.randperm(batch_size).cuda()
-    else:
-        index = torch.randperm(batch_size)
-
-    mixed_x = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b = y, y[index]
-    return mixed_x, y_a, y_b, lam
-
-
-def mixup_criterion(criterion, pred, y_a, y_b, lam):
-    return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
-
-
-def train(epoch):
-    print('\nEpoch: %d' % epoch)
-    model.train()
-    train_loss = 0
-    reg_loss = 0
-    correct = 0
-    correct1 = 0.0
-    total = 0
-    for batch_idx, (input_var, target_var) in enumerate(trainloader):
-        if use_cuda:
-            input_var, target_var = input_var.cuda(), target_var.cuda()
-
-        input_var, target_var = Variable(input_var), Variable(target_var)
-        lam = np.random.beta(args.alpha, args.alpha)
-        outputs , target_a , target_b , reweighted_target = model(input_var, target_var, mixup_hidden= True, mixup_alpha = args.alpha , lam = lam)
-#         print(softmax(outputs) , reweighted_target.nonzero())
-#         loss = bce_loss(softmax(outputs), reweighted_target)
-        loss = mixup_criterion(criterion, outputs, target_a, target_b, lam)
-        train_loss += loss.data.item()
-        _, predicted = torch.max(outputs.data, 1)
-        total += target_var.size(0)
-        correct += (lam * predicted.eq(target_a.data).cpu().sum().float()
-                    + (1 - lam) * predicted.eq(target_b.data).cpu().sum().float())
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-#         _ , outputs_in =  model.forward(input_var)
-#         _, predicted_in = torch.max(outputs_in.data, 1)
-#         correct1 += predicted_in.eq(target_var.data).cpu().sum().float()
-        
-        if batch_idx%50 ==0 :
-            print('{0}/{1}'.format(batch_idx,len(trainloader)), 
-                         'Loss: %.3f | Acc: %.3f%%  | Orig Acc:  %.3f%%  '
-                         % (train_loss/(batch_idx+1),
-                            100.*correct/total , 100.*correct/total))
-    
-    return (train_loss/batch_idx, reg_loss/batch_idx, 100.*correct/total)
-
-
-def test(epoch):
-    global best_acc
-    model.eval()
-    test_loss = 0
-    correct = 0
-    total = 0
-    for batch_idx, (inputs, targets) in enumerate(testloader):
-        if use_cuda:
-            inputs, targets = inputs.cuda(), targets.cuda()
-        inputs, targets = Variable(inputs, volatile=True), Variable(targets)
-        f , outputs = model.forward(inputs)
-        loss = criterion(outputs, targets)
-
-        test_loss += loss.data.item()
-        _, predicted = torch.max(outputs.data, 1)
-        total += targets.size(0)
-        correct += predicted.eq(targets.data).cpu().sum()
-
-    print('Loss: %.3f | Acc: %.3f%%'
-                     % (test_loss/(batch_idx+1), 100.*correct/total,
-                        correct, total))
-    acc = 100.*correct/total
-    if epoch == start_epoch + args.epoch - 1 or acc > best_acc:
-        checkpoint(acc, epoch)
-    if acc > best_acc:
-        best_acc = acc
-    return (test_loss/batch_idx, 100.*correct/total)
-       
-def checkpoint(epoch):
-    # Save checkpoint.
-    print('Saving..')
-    state = {
-        'epoch': epoch,
-        'state': model.state_dict()
-    }
-    checkpoint_file = args.model + '_baseline_aug_manifold_mixup_overexemplars4l_drop5'
-    if not os.path.isdir('checkpoints/miniImagenet/' + checkpoint_file):
-        os.mkdir('checkpoints/miniImagenet/' + checkpoint_file)
-    torch.save(state, './checkpoints/miniImagenet/{0}/{1}.tar'.format(checkpoint_file,epoch))
-
-    
-val_best_acc = 0.0
-loader = torch.load('./imagenet_val.pt')
-
-for epoch in range(start_epoch, args.epoch):
-    train_loss, reg_loss, acc = train(epoch)
-    scheduler.step()
-    if (epoch%5==0 or epoch == args.epoch - 1):
-        checkpoint(epoch)
-   
-    valmodel =  BaselineFinetune(model_dict['WideResNet28_10'],5,1,loss_type='dist')
-    valmodel.n_query=15
-    acc_all1, acc_all2 , acc_all3 = [],[],[]
-    for i,x in enumerate(loader):
-        x = x.view(-1,3,80,80)
-#         print(x.size())
-        f , _ = model(x.cuda())
-        f = f.view(5,16,-1)
-#         print(f.size())
-        scores  = valmodel.set_forward_adaptation(f.cpu())
-        acc = []
-#         print(len(scores))
-#         print(scores[0])
-        for each_score in scores:
-#             print(each_score.size())
-            pred = each_score.data.cpu().numpy().argmax(axis = 1)
-            y = np.repeat(range( 5 ), 15 )
-            acc.append(np.mean(pred == y)*100 )
-        acc_all1.append(acc[0])
-        acc_all2.append(acc[1])
-        acc_all3.append(acc[2])
-
-    print('Test Acc at 100= %4.2f%%' %(np.mean(acc_all1)))
-    print('Test Acc at 200= %4.2f%%' %(np.mean(acc_all2)))
-    print('Test Acc at 300= %4.2f%%' %(np.mean(acc_all3)))
-
-    if np.mean(acc_all3) > val_best_acc:
-        val_best_acc = np.mean(acc_all3)
-        checkpoint_file = args.model + '_baseline_aug_manifold_mixup_overexemplars4l_drop5'
-        bestfile =os.path.join('checkpoints/miniImagenet/' + checkpoint_file, 'best.tar')
-        torch.save({'epoch':epoch, 'state':model.state_dict()}, bestfile)
-
+  
