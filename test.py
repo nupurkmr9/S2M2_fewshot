@@ -21,6 +21,7 @@ from methods.matchingnet import MatchingNet
 from methods.relationnet import RelationNet
 from methods.maml import MAML
 from io_utils import model_dict, parse_args, get_resume_file, get_best_file , get_assigned_file
+import random
 
 def feature_evaluation(cl_data_file, model, n_way = 5, n_support = 5, n_query = 15, adaptation = False):
     class_list = cl_data_file.keys()
