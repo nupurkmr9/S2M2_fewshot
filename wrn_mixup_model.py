@@ -86,11 +86,8 @@ def mixup_data(x, y, lam):
         index = index.cuda()
     mixed_x = lam * x + (1 - lam) * x[index,:]
     y_a, y_b = y, y[index]
-    target_reweighted = to_one_hot(y , 64)
-    target_shuffled_onehot = target_reweighted[index]
-    target_reweighted = target_reweighted * lam + target_shuffled_onehot * (1 - lam)
-    
-    return mixed_x, y_a, y_b, lam , target_reweighted
+
+    return mixed_x, y_a, y_b, lam
 
     
 class WideResNet(nn.Module):
@@ -146,24 +143,24 @@ class WideResNet(nn.Module):
             target_a = target_b  = target
 
             if layer_mix == 0:
-                out, target_a , target_b , lam, target_reweighted = mixup_data(out, target, lam=lam)
+                out, target_a , target_b , lam = mixup_data(out, target, lam=lam)
 
             out = self.conv1(out)
             out = self.block1(out)
 
 
             if layer_mix == 1:
-                out, target_a , target_b , lam , target_reweighted = mixup_data(out, target, lam=lam)
+                out, target_a , target_b , lam  = mixup_data(out, target, lam=lam)
 
             out = self.block2(out)
 
             if layer_mix == 2:
-                out, target_a , target_b , lam , target_reweighted= mixup_data(out, target, lam=lam)
+                out, target_a , target_b , lam = mixup_data(out, target, lam=lam)
 
 
             out = self.block3(out)
             if  layer_mix == 3:
-                out, target_a , target_b , lam , target_reweighted = mixup_data(out, target, lam=lam)
+                out, target_a , target_b , lam = mixup_data(out, target, lam=lam)
 
             out = self.relu(self.bn1(out))
             out = F.avg_pool2d(out, out.size()[2:])

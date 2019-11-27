@@ -19,14 +19,15 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from data.datamgr import SimpleDataManager
+import configs
 # import models
-# from methods.baselinetrain import BaselineTrain
-from methods.baselinefinetune import BaselineFinetune
+from methods.baselinetrain import BaselineTrain
+# from methods.baselinefinetune import BaselineFinetune
 import wrn_mixup_model
 from io_utils import model_dict, parse_args, get_resume_file ,get_assigned_file
 
 
-
+use_gpu = torch.cuda.is_available()
 
 def train_manifold_mixup(base_loader, base_loader_test, model, start_epoch, stop_epoch, params):
 
@@ -47,11 +48,12 @@ def train_manifold_mixup(base_loader, base_loader_test, model, start_epoch, stop
         correct1 = 0.0
         total = 0
 
-        for batch_idx, (input_var, target_var) in enumerate(trainloader):
-            input_var, target_var = input_var.cuda(), target_var.cuda()
+        for batch_idx, (input_var, target_var) in enumerate(base_loader):
+            if use_gpu:
+                input_var, target_var = input_var.cuda(), target_var.cuda()
             input_var, target_var = Variable(input_var), Variable(target_var)
-            lam = np.random.beta(args.alpha, args.alpha)
-            _ , outputs , target_a , target_b  = model(input_var, target_var, mixup_hidden= True, mixup_alpha = args.alpha , lam = lam)
+            lam = np.random.beta(params.alpha, params.alpha)
+            _ , outputs , target_a , target_b  = model(input_var, target_var, mixup_hidden= True, mixup_alpha = params.alpha , lam = lam)
             loss = mixup_criterion(criterion, outputs, target_a, target_b, lam)
             train_loss += loss.data.item()
             _, predicted = torch.max(outputs.data, 1)
@@ -64,8 +66,8 @@ def train_manifold_mixup(base_loader, base_loader_test, model, start_epoch, stop
             optimizer.step()
             
             if batch_idx%50 ==0 :
-                print('{0}/{1}'.format(batch_idx,len(trainloader)), 'Loss: %.3f | Acc: %.3f%%  | Orig Acc:  %.3f%% '
-                             % (train_loss/(batch_idx+1),100.*correct/total , 100.*correct/total))
+                print('{0}/{1}'.format(batch_idx,len(base_loader)), 'Loss: %.3f | Acc: %.3f%% '
+                             % (train_loss/(batch_idx+1),100.*correct/total))
         
 
         if not os.path.isdir(params.checkpoint_dir):
@@ -77,34 +79,37 @@ def train_manifold_mixup(base_loader, base_loader_test, model, start_epoch, stop
          
 
         model.eval()
-        test_loss = 0
-        correct = 0
-        total = 0
-        for batch_idx, (inputs, targets) in enumerate(base_loader_test):
-            inputs, targets = inputs.cuda(), targets.cuda()
-            inputs, targets = Variable(inputs, volatile=True), Variable(targets)
-            f , outputs = model.forward(inputs)
-            loss = criterion(outputs, targets)
-            test_loss += loss.data.item()
-            _, predicted = torch.max(outputs.data, 1)
-            total += targets.size(0)
-            correct += predicted.eq(targets.data).cpu().sum()
+        with torch.no_grad():
+            test_loss = 0
+            correct = 0
+            total = 0
+            for batch_idx, (inputs, targets) in enumerate(base_loader_test):
+                if use_gpu:
+                    inputs, targets = inputs.cuda(), targets.cuda()
+                inputs, targets = Variable(inputs), Variable(targets)
+                f , outputs = model.forward(inputs)
+                loss = criterion(outputs, targets)
+                test_loss += loss.data.item()
+                _, predicted = torch.max(outputs.data, 1)
+                total += targets.size(0)
+                correct += predicted.eq(targets.data).cpu().sum()
 
-        print('Loss: %.3f | Acc: %.3f%%'
-                         % (test_loss/(batch_idx+1), 100.*correct/total ))
+            print('Loss: %.3f | Acc: %.3f%%'
+                             % (test_loss/(batch_idx+1), 100.*correct/total ))
 
-
+        torch.cuda.empty_cache()
         
     return model 
 
 
 
 
-def train_rotation(base_loader, base_loader_test, model, optimization, start_epoch, stop_epoch, params , tmp):
+def train_rotation(base_loader, base_loader_test, model, start_epoch, stop_epoch, params , tmp):
     rotate_classifier = nn.Sequential( nn.Linear(640,4)) 
-    rotate_classifier.cuda()
+    if use_gpu:
+        rotate_classifier.cuda()
     
-    if 'rotate' in tmp:
+    if tmp is not None and 'rotate' in tmp:
         print("loading rotate model")
         rotate_classifier.load_state_dict(tmp['rotate'])
         
@@ -138,9 +143,15 @@ def train_rotation(base_loader, base_loader_test, model, optimization, start_epo
                 y_ += [y[j] for _ in range(4)]
                 a_ += [torch.tensor(0),torch.tensor(1),torch.tensor(2),torch.tensor(3)]
 
-            x_ = Variable(torch.stack(x_,0)).cuda()
-            y_ = Variable(torch.stack(y_,0)).cuda()
-            a_ = Variable(torch.stack(a_,0)).cuda()
+            x_ = Variable(torch.stack(x_,0))
+            y_ = Variable(torch.stack(y_,0))
+            a_ = Variable(torch.stack(a_,0))
+
+            if use_gpu:
+                x_ = x_.cuda()
+                y_ = y_.cuda()
+                a_ = a_.cuda()
+
             f,scores = model.forward(x_)
             rotate_scores =  rotate_classifier(f)
 
@@ -170,59 +181,63 @@ def train_rotation(base_loader, base_loader_test, model, optimization, start_epo
                 
         model.eval()
         rotate_classifier.eval()
-        correct = rcorrect = total = 0
-        for i,(x,y) in enumerate(base_loader_test):
-            if i<2:
-                bs = x.size(0)
-                x_ = []
-                y_ = []
-                a_ = []
-                for j in range(bs):
-                    x90 = x[j].transpose(2,1).flip(1)
-                    x180 = x90.transpose(2,1).flip(1)
-                    x270 =  x180.transpose(2,1).flip(1)
-                    x_ += [x[j], x90, x180, x270]
-                    y_ += [y[j] for _ in range(4)]
-                    a_ += [torch.tensor(0),torch.tensor(1),torch.tensor(2),torch.tensor(3)]
 
-                x_ = Variable(torch.stack(x_,0)).cuda()
-                y_ = Variable(torch.stack(y_,0)).cuda()
-                a_ = Variable(torch.stack(a_,0)).cuda()
-                f,scores = model(x_)
-                rotate_scores =  rotate_classifier(f)
-                p1 = torch.argmax(scores,1)
-                correct += (p1==y_).sum().item()
-                total += p1.size(0)
-                p2 = torch.argmax(rotate_scores,1)
-                rcorrect += (p2==a_).sum().item()
+        with torch.no_grad():
+            correct = rcorrect = total = 0
+            for i,(x,y) in enumerate(base_loader_test):
+                if i<10:
+                    bs = x.size(0)
+                    x_ = []
+                    y_ = []
+                    a_ = []
+                    for j in range(bs):
+                        x90 = x[j].transpose(2,1).flip(1)
+                        x180 = x90.transpose(2,1).flip(1)
+                        x270 =  x180.transpose(2,1).flip(1)
+                        x_ += [x[j], x90, x180, x270]
+                        y_ += [y[j] for _ in range(4)]
+                        a_ += [torch.tensor(0),torch.tensor(1),torch.tensor(2),torch.tensor(3)]
 
-        print("Epoch {0} : Accuracy {1}, Rotate Accuracy {2}".format(epoch,(float(correct)*100)/total,(float(rcorrect)*100)/total))
+                    x_ = Variable(torch.stack(x_,0))
+                    y_ = Variable(torch.stack(y_,0))
+                    a_ = Variable(torch.stack(a_,0))
+
+                    if use_gpu:
+                        x_ = x_.cuda()
+                        y_ = y_.cuda()
+                        a_ = a_.cuda()
+
+                    f,scores = model(x_)
+                    rotate_scores =  rotate_classifier(f)
+                    p1 = torch.argmax(scores,1)
+                    correct += (p1==y_).sum().item()
+                    total += p1.size(0)
+                    p2 = torch.argmax(rotate_scores,1)
+                    rcorrect += (p2==a_).sum().item()
+
+            print("Epoch {0} : Accuracy {1}, Rotate Accuracy {2}".format(epoch,(float(correct)*100)/total,(float(rcorrect)*100)/total))
+
+        torch.cuda.empty_cache()
         
 
     return model
 
 
 if __name__ == '__main__':
-    params = parse_args('save_features')
+    params = parse_args('train')
     
+    params.dataset = 'cifar'
     image_size = 32
 
-
-    split = params.split
     base_file = configs.data_dir[params.dataset] + 'base.json'
-    checkpoint_dir = '%s/checkpoints/%s/%s_%s' %(configs.save_dir, params.dataset, params.model, params.method)
+    params.checkpoint_dir = '%s/checkpoints/%s/%s_%s' %(configs.save_dir, params.dataset, params.model, params.method)
     start_epoch = params.start_epoch
     stop_epoch = params.stop_epoch
-
-    if params.save_iter != -1:
-        modelfile   = get_assigned_file(checkpoint_dir,params.save_iter)
-    else:
-        modelfile   = get_resume_file(checkpoint_dir)
     
 
     base_datamgr    = SimpleDataManager(image_size, batch_size = params.batch_size)
     base_loader     = base_datamgr.get_data_loader( base_file , aug = params.train_aug )
-    val_datamgr    = SimpleDataManager(image_size, batch_size = 32)
+    val_datamgr    = SimpleDataManager(image_size, batch_size = params.test_batch_size)
     val_loader     = base_datamgr.get_data_loader( base_file , aug = False )
 
 
@@ -235,36 +250,79 @@ if __name__ == '__main__':
  
             
     
-    if params.method =='S2M2_R' 
-        resume_rotate_file_dir = checkpoint_dir.replace("S2M2_R","rotation")
-        resume_file = get_resume_file( resume_rotate_file_dir )        
-        print("resume_file" , resume_file)
-        tmp = torch.load(resume_file)
-        start_epoch = tmp['epoch']+1
-        print("restored epoch is" , tmp['epoch'])
-        state = tmp['state']
-        state_keys = list(state.keys())
+    if params.method =='S2M2_R':
 
-        for i, key in enumerate(state_keys):
-            if "feature." in key:
-                newkey = key.replace("feature.","")  # an architecture model has attribute 'feature', load architecture feature to backbone by casting name from 'feature.trunk.xx' to 'trunk.xx'  
-                state[newkey] = state.pop(key)
-            else:
-                state[key.replace("classifier.","linear.")] =  state[key]
-                state.pop(key)
+        if use_gpu:
+            if torch.cuda.device_count() > 1:
+                model = torch.nn.DataParallel(model, device_ids = range(torch.cuda.device_count()))  
+            model.cuda()
 
-        
-        model.load_state_dict(state)        
-        model = torch.nn.DataParallel(model, [0,1,2])  
-        model.cuda()
+        if params.resume:
+            resume_file = get_resume_file(params.checkpoint_dir )        
+            print("resume_file" , resume_file)
+            tmp = torch.load(resume_file)
+            start_epoch = tmp['epoch']+1
+            print("restored epoch is" , tmp['epoch'])
+            state = tmp['state']        
+            model.load_state_dict(state)        
+
+        else:
+            resume_rotate_file_dir = params.checkpoint_dir.replace("S2M2_R","rotation")
+            resume_file = get_resume_file( resume_rotate_file_dir )        
+            print("resume_file" , resume_file)
+            tmp = torch.load(resume_file)
+            start_epoch = tmp['epoch']+1
+            print("restored epoch is" , tmp['epoch'])
+            state = tmp['state']
+            state_keys = list(state.keys())
+
+            for i, key in enumerate(state_keys):
+                if "feature." in key:
+                    newkey = key.replace("feature.","")  # an architecture model has attribute 'feature', load architecture feature to backbone by casting name from 'feature.trunk.xx' to 'trunk.xx'  
+                    state[newkey] = state.pop(key)
+                else:
+                    state[key.replace("classifier.","linear.")] =  state[key]
+                    state.pop(key)
+
+            
+            model.load_state_dict(state)        
+    
         model = train_manifold_mixup(base_loader, val_loader, model, start_epoch, start_epoch+stop_epoch, params)
 
 
     elif params.method =='rotation':
-        model = train_rotation(base_loader, val_loader, model, start_epoch, stop_epoch, params,tmp):
+        if use_gpu:
+            if torch.cuda.device_count() > 1:
+                model = torch.nn.DataParallel(model, device_ids = range(torch.cuda.device_count()))  
+            model.cuda()
+
+        if params.resume:
+            resume_file = get_resume_file(params.checkpoint_dir )        
+            print("resume_file" , resume_file)
+            tmp = torch.load(resume_file)
+            start_epoch = tmp['epoch']+1
+            print("restored epoch is" , tmp['epoch'])
+            state = tmp['state']        
+            model.load_state_dict(state)        
+
+        model = train_rotation(base_loader, val_loader, model, start_epoch, stop_epoch, params,None)
 
     elif params.method == 'manifold_mixup':
-        model = train_manifold_mixup(base_loader, val_loader, model, start_epoch, stop_epoch, params):
+        if use_gpu:
+            if torch.cuda.device_count() > 1:
+                model = torch.nn.DataParallel(model, device_ids = range(torch.cuda.device_count()))  
+            model.cuda()
+
+        if params.resume:
+            resume_file = get_resume_file(params.checkpoint_dir )        
+            print("resume_file" , resume_file)
+            tmp = torch.load(resume_file)
+            start_epoch = tmp['epoch']+1
+            print("restored epoch is" , tmp['epoch'])
+            state = tmp['state']        
+            model.load_state_dict(state)        
+
+        model = train_manifold_mixup(base_loader, val_loader, model, start_epoch, stop_epoch, params)
 
 
 

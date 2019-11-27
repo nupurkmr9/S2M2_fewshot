@@ -23,7 +23,7 @@ model_dict = dict(
 
 def parse_args(script):
     parser = argparse.ArgumentParser(description= 'few-shot script %s' %(script))
-    parser.add_argument('--dataset'     , default='CUB',        help='CUB/miniImagenet/cross/cifar')
+    parser.add_argument('--dataset'     , default='cifar',        help='CUB/miniImagenet/cross/cifar')
     parser.add_argument('--model'       , default='WideResNet28_10',      help='model:  WideResNet28_10 /Conv{4|6} /ResNet{10|18|34|50|101}') # 50 and 101 are not used in the paper
     parser.add_argument('--method'      , default='S2M2_R',   help='rotation/manifold_mixup/S2M2_R') #relationnet_softmax replace L2 norm with softmax to expedite training, maml_approx use first-order approximation in the gradient for efficiency
     parser.add_argument('--train_n_way' , default=5, type=int,  help='class num to classify for training') #baseline and baseline++ would ignore this parameter
@@ -33,12 +33,13 @@ def parse_args(script):
 
     if script == 'train':
         parser.add_argument('--num_classes' , default=200, type=int, help='total number of classes in softmax, only used in baseline') #make it larger than the maximum label value in base class
-        parser.add_argument('--save_freq'   , default=50, type=int, help='Save frequency')
+        parser.add_argument('--save_freq'   , default=10, type=int, help='Save frequency')
         parser.add_argument('--start_epoch' , default=0, type=int,help ='Starting epoch')
         parser.add_argument('--stop_epoch'  , default=400, type=int, help ='Stopping epoch') #for meta-learning methods, each epoch contains 100 episodes. The default epoch number is dataset dependent. See train.py
         parser.add_argument('--resume'      , action='store_true', help='continue from previous trained model with largest epoch')
         parser.add_argument('--lr'          , default=0.001, type=int, help='learning rate') 
-        parser.add_argument('--batch_size' , default=512, type=int, help='batch size ')
+        parser.add_argument('--batch_size' , default=16, type=int, help='batch size ')
+        parser.add_argument('--test_batch_size' , default=2, type=int, help='batch size ')
         parser.add_argument('--alpha'       , default=2.0, type=int, help='for manifold_mixup or S2M2 training ')
         parser.add_argument('--warmup'      , action='store_true', help='continue from baseline, neglected if resume is true') #never used in the paper
     elif script == 'save_features':
@@ -64,14 +65,14 @@ def get_resume_file(checkpoint_dir):
     if len(filelist) == 0:
         return None
 
-    filelist =  [ x  for x in filelist if os.path.basename(x) != 'best_model.tar' ]
+    filelist =  [ x  for x in filelist if os.path.basename(x) != 'best.tar' ]
     epochs = np.array([int(os.path.splitext(os.path.basename(x))[0]) for x in filelist])
     max_epoch = np.max(epochs)
     resume_file = os.path.join(checkpoint_dir, '{:d}.tar'.format(max_epoch))
     return resume_file
 
 def get_best_file(checkpoint_dir):    
-    best_file = os.path.join(checkpoint_dir, 'best_model.tar')
+    best_file = os.path.join(checkpoint_dir, 'best.tar')
     if os.path.isfile(best_file):
         return best_file
     else:
