@@ -26,15 +26,25 @@ miniImagenet
 * run 'source ./download_miniImagenet.sh' 
 
 
-**Training**
-	
+DATASETNAME: miniImagenet/cifar/CUB
 
+METHODNAME: S2M2_R/rotation/manifold_mixup
+
+**Training**
+
+For CIFAR-10
+
+	python train_cifar.py --method [METHODNAME] --model WideResNet28_10
+	
+For miniImagenet/CUB
+
+	python train.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10
+		
 **Fetching WideResNet_28_10 model checkpoints for evaluation**
 
 Create an empty 'checkpoints' directory inside 'S2M2'
 
-The model for each dataset can be downloaded from this link - 'https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_
-' 
+The model for each dataset can be downloaded from this link - 'https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_' 
 
 Move the tar files for each dataset into 'checkpoints' folder and untar it. E.g. tar -xvzf cifar_model.tar.gz 
 
@@ -44,9 +54,6 @@ Move the tar files for each dataset into 'checkpoints' folder and untar it. E.g.
 
 	python save_features.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10
 
-DATASETNAME: miniImagenet/cifar/CUB
-
-METHODNAME: S2M2_R/rotation/manifold_mixup
 
 **Fetching novel class features for evaluation**
 
