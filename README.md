@@ -26,11 +26,12 @@ miniImagenet
 * run 'source ./download_miniImagenet.sh' 
 
 
+**Training**
+
 DATASETNAME: miniImagenet/cifar/CUB
 
 METHODNAME: S2M2_R/rotation/manifold_mixup
 
-**Training**
 
 For CIFAR-10
 
@@ -44,7 +45,7 @@ For miniImagenet/CUB
 
 Create an empty 'checkpoints' directory inside 'S2M2'
 
-The model for each dataset can be downloaded from this link - 'https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_' 
+The model for each dataset can be downloaded from this link - [https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_](https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_)
 
 Move the tar files for each dataset into 'checkpoints' folder and untar it. E.g. tar -xvzf cifar_model.tar.gz 
 
