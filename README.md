@@ -66,7 +66,7 @@ Move the tar files for each dataset into 'features' folder and untar it.
 
 **Evaluating the few-shot performance**
 
-	python orig_test.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10 --n_shot [1/5]
+	python test.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10 --n_shot [1/5]
 
 Comparison with prior/current state-of-the-art methods on mini-ImageNet, CUB and CIFAR-FS dataset.
 Note: We implemented LEO on CUB dataset. Other numbers are reported directly from the paper. 
