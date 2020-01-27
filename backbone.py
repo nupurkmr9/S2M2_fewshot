@@ -492,7 +492,7 @@ def ResNet101( flatten = True):
 
 
 def WideResNet28_10( flatten = True , keeprate = 0.9):
-    return WideResNet(28,10,keeprate,flatten)
+    return WideResNet(28,10,dropRate=1.0-keeprate,flatten=flatten)
 
 
 
