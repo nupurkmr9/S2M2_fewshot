@@ -4,5 +4,4 @@ wget https://github.com/twitter/meta-learning-lstm/blob/master/data/miniImagenet
 wget https://github.com/twitter/meta-learning-lstm/blob/master/data/miniImagenet/val.csv
 wget http://image-net.org/image/ILSVRC2015/ILSVRC2015_CLS-LOC.tar.gz -P ../../Datasets/
 tar -zxvf ILSVRC2015_CLS-LOC.tar.gz -C ../../Datasets/
-python write_miniImagenet_filelist.py
-python write_cross_filelist.py
+python make_json.py
