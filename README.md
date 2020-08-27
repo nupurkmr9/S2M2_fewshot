@@ -8,7 +8,7 @@ Our code is built upon the code base of [A Closer Look at Few-shot Classificatio
 
 Running the code
 ------------
-**Dataset**: mini-ImageNet, CIFAR-FS, CUB
+**Dataset**: mini-ImageNet, CIFAR-FS, CUB, tiered-ImageNet
 
 ***Donwloading the dataset***:
 
@@ -25,6 +25,8 @@ miniImagenet
 * Change directory to filelists/miniImagenet/
 * run 'source ./download_miniImagenet.sh' 
 
+tiered-ImageNet
+* Novel/Base split taken from https://github.com/renmengye/few-shot-ssl-public
 
 **Training**
 
@@ -46,6 +48,8 @@ For miniImagenet/CUB
 Create an empty 'checkpoints' directory inside 'S2M2'
 
 The model for each dataset can be downloaded from this link - [https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_](https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_)
+
+Model for tiered-ImageNet: [https://drive.google.com/file/d/1Sojs77vt_ziQqq2IgA34d9bDO-OlKNfq/view?usp=sharing](https://drive.google.com/file/d/1Sojs77vt_ziQqq2IgA34d9bDO-OlKNfq/view?usp=sharing)
 
 Move the tar files for each dataset into 'checkpoints' folder and untar it. E.g. tar -xvzf cifar_model.tar.gz 
 
