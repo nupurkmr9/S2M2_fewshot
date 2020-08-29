@@ -87,6 +87,21 @@ Note: We implemented LEO on CUB dataset. Other numbers are reported directly fro
 |     S2M2_R     | 64.93 +- 0.18 | 83.18 +- 0.11 | 80.68 +- 0.81 | 90.85 +- 0.44 | 74.81 +- 0.19  | 87.47 +- 0.13 |
 
 
+If you use this code for your research, Please cite using
+
+```
+@inproceedings{mangla2020charting,
+  title={Charting the right manifold: Manifold mixup for few-shot learning},
+  author={Mangla, Puneet and Kumari, Nupur and Sinha, Abhishek and Singh, Mayank and Krishnamurthy, Balaji and Balasubramanian, Vineeth N},
+  booktitle={The IEEE Winter Conference on Applications of Computer Vision},
+  pages={2218--2227},
+  year={2020}
+}
+
+```
+
+
+
 References
 ------------
 [A Closer Look at Few-shot Classification](https://openreview.net/pdf?id=HkxLXnAcFQ)
