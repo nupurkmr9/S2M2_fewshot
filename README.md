@@ -7,26 +7,6 @@ A few-shot classification algorithm: [Charting the Right Manifold: Manifold Mixu
 Our code is built upon the code base of [A Closer Look at Few-shot Classification](https://openreview.net/pdf?id=HkxLXnAcFQ) and [Manifold Mixup: Better Representations by Interpolating Hidden States](http://proceedings.mlr.press/v97/verma19a.html)
 
 Running the code
-------------
-**Dataset**: mini-ImageNet, CIFAR-FS, CUB, tiered-ImageNet
-
-***Donwloading the dataset***:
-
-CUB
-
-* Change directory to filelists/CUB/
-* run 'source ./download_CUB.sh' 
-
-CIFAR-FS
-* Change directory to filelists/cifar/
-* run 'source ./download_cifar.sh' 
-
-miniImagenet
-* Change directory to filelists/miniImagenet/
-* run 'source ./download_miniImagenet.sh' 
-
-tiered-ImageNet
-* Novel/Base split taken from https://github.com/renmengye/few-shot-ssl-public
 
 **Training**
 
@@ -37,41 +17,47 @@ METHODNAME: S2M2_R/rotation/manifold_mixup
 
 For CIFAR-10
 
-	python train_cifar.py --method [METHODNAME] --model WideResNet28_10
+	python train_cifar.py --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size>
 	
 For miniImagenet/CUB
 
-	python train.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10
+	python train.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size>
+	
+	
+------------
+**Example Training script for CUB Dataset**: 
+
+* Change directory to filelists/CUB/
+* run 'source ./download_CUB.sh' 
+* python train.py --dataset CUB --method rotation --model WideResNet28_10 --stop_epoch 200 --batch_size 64 --test_batch_size 16
+* python train.py --dataset CUB --method S2M2_R --model WideResNet28_10 --stop_epoch 100 --batch_size 64 --test_batch_size 16
+
+
+tiered-ImageNet
+* Novel/Base split taken from https://github.com/renmengye/few-shot-ssl-public
+
+
 		
-**Fetching WideResNet_28_10 model checkpoints for evaluation**
+**Fetching pretrained WideResNet_28_10 model checkpoints for evaluation**
 
-Create an empty 'checkpoints' directory inside 'S2M2'
+Directory path to save models should be: checkpoints/<DATASETNAME>/WideResNet28_10_<METHODNAME>/
 
-The model for each dataset can be downloaded from this link - [https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_](https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_)
-
-Model for tiered-ImageNet: [https://drive.google.com/file/d/1Sojs77vt_ziQqq2IgA34d9bDO-OlKNfq/view?usp=sharing](https://drive.google.com/file/d/1Sojs77vt_ziQqq2IgA34d9bDO-OlKNfq/view?usp=sharing)
-
-Move the tar files for each dataset into 'checkpoints' folder and untar it. E.g. tar -xvzf cifar_model.tar.gz 
+Mdoels can be downloadeded from the link - [https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_](https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_)
+Move the tar files for each dataset into 'checkpoints' folder and untar it if required.
 
 
-**Saving the features of a checkpoint for checkpoint evalution**
-
-
-	python save_features.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10
-
-
-**Fetching novel class features for evaluation**
+**Few-shot evaluation**
 
 Create an empty 'features' directory inside 'S2M2'
 
-Features can be be directly downloaded at this link 'https://drive.google.com/open?id=1JtA7p3sDPksvBmOsJuR4EHw9zRHnKurj' for easy evaluation without the need to download datasets and models. 
-Move the tar files for each dataset into 'features' folder and untar it. 
-
-
-**Evaluating the few-shot performance**
-
+	python save_features.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10
 	python test.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10 --n_shot [1/5]
 
+
+Features of pre-trained network can also be be directly downloaded at this link 'https://drive.google.com/open?id=1JtA7p3sDPksvBmOsJuR4EHw9zRHnKurj' for easy evaluation without the need to download datasets and models. Move the tar files for each dataset into 'features' folder and untar it. 
+
+
+	
 Comparison with prior/current state-of-the-art methods on mini-ImageNet, CUB and CIFAR-FS dataset.
 Note: We implemented LEO on CUB dataset. Other numbers are reported directly from the paper. 
 
