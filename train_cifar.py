@@ -246,7 +246,7 @@ if __name__ == '__main__':
     elif params.method == 'S2M2_R':
         model = wrn_mixup_model.wrn28_10(64 , 0.9)
     elif params.method == 'rotation':
-        model = BaselineTrain( model_dict[params.model], 64, drop loss_type = 'dist')
+        model = BaselineTrain( model_dict[params.model], 64, dropRate = 0.9, loss_type = 'dist')
  
             
     

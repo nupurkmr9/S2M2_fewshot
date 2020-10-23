@@ -491,8 +491,8 @@ def ResNet101( flatten = True):
     return ResNet(BottleneckBlock, [3,4,23,3],[256,512,1024,2048], flatten)
 
 
-def WideResNet28_10( flatten = True , keeprate = 0.5):
-    return WideResNet(28,10,dropRate=1.0-keeprate,flatten=flatten)
+def WideResNet28_10( flatten = True , dropRate = 0.5):
+    return WideResNet(28,10,dropRate=dropRate,flatten=flatten)
 
 
 

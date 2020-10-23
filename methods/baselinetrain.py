@@ -8,9 +8,9 @@ import numpy as np
 import torch.nn.functional as F
 
 class BaselineTrain(nn.Module):
-    def __init__(self, model_func, num_class, loss_type = 'softmax'):
+    def __init__(self, model_func, num_class,dropRate = 0.5, loss_type = 'softmax'):
         super(BaselineTrain, self).__init__()
-        self.feature    = model_func()
+        self.feature    = model_func(dropRate = dropRate)
         if loss_type == 'softmax':
             self.classifier = nn.Linear(self.feature.final_feat_dim, num_class)
             self.classifier.bias.data.fill_(0)
