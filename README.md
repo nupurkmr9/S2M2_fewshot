@@ -24,18 +24,15 @@ For miniImagenet/CUB/tiered-ImageNet
 
 	python train.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size> --stop_epoch <stop_epoch>
 	
+* For tiered-ImageNet Novel/Base split taken from https://github.com/renmengye/few-shot-ssl-public
 	
 ------------
-**Example Training script for CUB Dataset**: 
+**Example Training script to replicate our result on CUB Dataset**: 
 
 * Change directory to filelists/CUB/
 * run 'source ./download_CUB.sh' 
 * python train.py --dataset CUB --method rotation --model WideResNet28_10 --stop_epoch 200 --batch_size 64 --test_batch_size 16
 * python train.py --dataset CUB --method S2M2_R --model WideResNet28_10 --stop_epoch 100 --batch_size 64 --test_batch_size 16
-
-
-tiered-ImageNet
-* Novel/Base split taken from https://github.com/renmengye/few-shot-ssl-public
 
 
 		
