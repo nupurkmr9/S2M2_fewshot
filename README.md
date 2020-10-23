@@ -11,7 +11,7 @@ Running the code
 
 **Training**
 
-DATASETNAME: miniImagenet/cifar/CUB
+DATASETNAME: miniImagenet/cifar/CUB/tieredImagenet
 
 METHODNAME: S2M2_R/rotation/manifold_mixup
 
@@ -20,11 +20,11 @@ For CIFAR-10
 
 	python train_cifar.py --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size> --stop_epoch <stop_epoch>
 	
-For miniImagenet/CUB/tiered-ImageNet
+For miniImagenet/CUB/tieredImagenet
 
 	python train.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size> --stop_epoch <stop_epoch>
 	
-* For tiered-ImageNet Novel/Base split taken from https://github.com/renmengye/few-shot-ssl-public
+* For tieredImagenet Novel/Base split taken from https://github.com/renmengye/few-shot-ssl-public
 	
 ------------
 **Example Training script to replicate our result on CUB Dataset**: 
