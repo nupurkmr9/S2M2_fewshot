@@ -7,6 +7,7 @@ A few-shot classification algorithm: [Charting the Right Manifold: Manifold Mixu
 Our code is built upon the code base of [A Closer Look at Few-shot Classification](https://openreview.net/pdf?id=HkxLXnAcFQ) and [Manifold Mixup: Better Representations by Interpolating Hidden States](http://proceedings.mlr.press/v97/verma19a.html)
 
 Running the code
+------------
 
 **Training**
 
@@ -17,11 +18,11 @@ METHODNAME: S2M2_R/rotation/manifold_mixup
 
 For CIFAR-10
 
-	python train_cifar.py --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size>
+	python train_cifar.py --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size> --stop_epoch <stop_epoch>
 	
-For miniImagenet/CUB
+For miniImagenet/CUB/tiered-ImageNet
 
-	python train.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size>
+	python train.py --dataset [DATASETNAME] --method [METHODNAME] --model WideResNet28_10 --batch_size <batch_size> --stop_epoch <stop_epoch>
 	
 	
 ------------
@@ -40,10 +41,9 @@ tiered-ImageNet
 		
 **Fetching pretrained WideResNet_28_10 model checkpoints for evaluation**
 
-Directory path to save models should be: checkpoints/<DATASETNAME>/WideResNet28_10_<METHODNAME>/
+Directory path to save models should be: checkpoints/[DATASETNAME]/WideResNet28_10_[METHODNAME]/
 
-Mdoels can be downloadeded from the link - [https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_](https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_)
-Move the tar files for each dataset into 'checkpoints' folder and untar it if required.
+Pre-trained mdoels can be downloadeded from [https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_](https://drive.google.com/open?id=1S-t56H8YWzMn3sjemBcwMtGuuUxZnvb_). Move the tar files for each dataset into 'checkpoints' folder and untar it if required.
 
 
 **Few-shot evaluation**
@@ -58,7 +58,8 @@ Features of pre-trained network can also be be directly downloaded at this link 
 
 
 	
-Comparison with prior/current state-of-the-art methods on mini-ImageNet, CUB and CIFAR-FS dataset.
+**Comparison with prior/current state-of-the-art methods on mini-ImageNet, CUB and CIFAR-FS dataset.**
+
 Note: We implemented LEO on CUB dataset. Other numbers are reported directly from the paper. 
 
 
