@@ -91,8 +91,7 @@ def mixup_data(x, y, lam):
 
     
 class WideResNet(nn.Module):
-    def __init__(self, depth=28, widen_factor=10, num_classes= 200 , loss_type = 'dist', per_img_std = False, stride = 1 ):
-        dropRate = 0.5
+    def __init__(self, depth=28, widen_factor=10, num_classes= 200 , loss_type = 'dist', per_img_std = False, stride = 1 , dropRate=0.5 ):
         flatten = True
         super(WideResNet, self).__init__()
         nChannels = [16, 16*widen_factor, 32*widen_factor, 64*widen_factor]
@@ -182,7 +181,7 @@ class WideResNet(nn.Module):
         
                   
         
-def wrn28_10(num_classes=10 , loss_type = 'dist'):
-    model = WideResNet(depth=28, widen_factor=10, num_classes=num_classes, loss_type = loss_type , per_img_std = False, stride = 1 )
+def wrn28_10(num_classes=10 , drop_rate= 0.5, loss_type = 'dist'):
+    model = WideResNet(depth=28, widen_factor=10, num_classes=num_classes, loss_type = loss_type , per_img_std = False, stride = 1 ,dropRate = drop_rate)
     return model
 
