@@ -9,6 +9,23 @@ Our code is built upon the code base of [A Closer Look at Few-shot Classificatio
 Running the code
 ------------
 
+***Donwloading the dataset and create base/val/novel splits***:
+
+miniImageNet
+* Change directory to filelists/miniImagenet/
+* Run 'source ./download_miniImagenet.sh'
+
+CUB
+
+* Change directory to filelists/CUB/
+* Run 'source ./download_CUB.sh' 
+
+CIFAR-FS
+
+* Change directory to filelists/cifar/
+* Run 'source ./download_cifar.sh' 
+
+
 **Training**
 
 DATASETNAME: miniImagenet/cifar/CUB/tieredImagenet
@@ -29,8 +46,6 @@ For miniImagenet/CUB/tieredImagenet
 ------------
 **Example Training script to replicate our result on CUB Dataset**: 
 
-* Change directory to filelists/CUB/
-* run 'source ./download_CUB.sh' 
 * python train.py --dataset CUB --method rotation --model WideResNet28_10 --stop_epoch 200 --batch_size 64 --test_batch_size 16
 * python train.py --dataset CUB --method S2M2_R --model WideResNet28_10 --stop_epoch 100 --batch_size 64 --test_batch_size 16
 
